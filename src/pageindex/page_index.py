@@ -4,7 +4,10 @@ import copy
 import math
 import random
 import re
-from .utils import *
+from .core.llm import ChatGPT_API, ChatGPT_API_with_finish_reason, ChatGPT_API_async, extract_json, count_tokens, get_json_content
+from .core.tree import convert_page_to_int, convert_physical_index_to_int, add_node_text, add_node_text_with_labels
+from .core.pdf import get_number_of_pages, get_pdf_title, get_page_tokens, get_text_of_pages, get_first_start_page_from_text, get_last_start_page_from_text
+from .core.logging import JsonLogger
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 

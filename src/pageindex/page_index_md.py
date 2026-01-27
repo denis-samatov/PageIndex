@@ -2,10 +2,9 @@ import asyncio
 import json
 import re
 import os
-try:
-    from .utils import *
-except:
-    from utils import *
+
+from .core.llm import count_tokens
+from .core.tree import structure_to_list, write_node_id, format_structure, create_clean_structure_for_description, generate_doc_description, generate_node_summary
 
 async def get_node_summary(node, summary_token_threshold=200, model=None):
     node_text = node.get('text')
@@ -303,7 +302,7 @@ if __name__ == "__main__":
     
     # MD_NAME = 'Detect-Order-Construct'
     MD_NAME = 'cognitive-load'
-    MD_PATH = os.path.join(os.path.dirname(__file__), '..', 'tests/markdowns/', f'{MD_NAME}.md')
+    MD_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'markdowns', f'{MD_NAME}.md')
 
 
     MODEL="gpt-4.1"
@@ -330,7 +329,7 @@ if __name__ == "__main__":
     print('='*60)
     print_toc(tree_structure['structure'])
 
-    output_path = os.path.join(os.path.dirname(__file__), '..', 'results', f'{MD_NAME}_structure.json')
+    output_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'results', f'{MD_NAME}_structure.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     with open(output_path, 'w', encoding='utf-8') as f:

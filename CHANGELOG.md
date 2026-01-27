@@ -1,16 +1,35 @@
-# Change Log
-All notable changes to this project will be documented in this file.
+# Журнал изменений
 
-## Beta - 2025-04-23
+Все заметные изменения проекта будут документироваться в этом файле.
 
-### Fixed
-- [x] Fixed a bug introduced on April 18 where `start_index` was incorrectly passed.
+## [0.1.0] - 2026-01-27
 
-## Beta - 2025-04-03
+### Добавлено
 
-### Added
-- [x] Add node_id, node summary
-- [x] Add document discription
+- Модульная архитектура: разделение `utils.py` на `core/llm.py`, `core/pdf.py`, `core/tree.py`.
+- Pydantic для валидации конфигурации (`src/pageindex/config.py`).
+- Типизация (Type hints) и docstrings для всех ключевых модулей.
+- Тесты (`pytest`) для покрытия основного функционала.
+- `API_REFERENCE.md` и обновленный Developer Guide в `README.md`.
 
-### Changed
-- [x] Change "child_nodes" -> "nodes" to simplify the structure
+### Изменено
+
+- `config.yaml` теперь использует булевы значения (`true`/`false`) вместо строк "yes"/"no".
+- `utils.py` оставлен как фасад для обратной совместимости.
+
+## Бета - 2025-04-23
+
+### Исправлено
+
+- [x] Исправлена ошибка, появившаяся 18 апреля: `start_index` передавался неверно.
+
+## Бета - 2025-04-03
+
+### Добавлено
+
+- [x] Добавлены node_id и резюме узла
+- [x] Добавлено описание документа
+
+### Изменено
+
+- [x] `child_nodes` -> `nodes` для упрощения структуры

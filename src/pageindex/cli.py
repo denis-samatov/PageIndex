@@ -1,40 +1,58 @@
 import argparse
-import os
 import json
-from pageindex import *
-from pageindex.page_index_md import md_to_tree
+import os
 
-if __name__ == "__main__":
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description='Process PDF or Markdown document and generate structure')
+from .page_index import page_index_main
+from .page_index_md import md_to_tree
+from .config import ConfigLoader
+
+
+def _build_config_overrides(args):
+    candidates = {
+        'model': args.model,
+        'toc_check_page_num': args.toc_check_pages,
+        'max_page_num_each_node': args.max_pages_per_node,
+        'max_token_num_each_node': args.max_tokens_per_node,
+        'if_add_node_id': args.if_add_node_id,
+        'if_add_node_summary': args.if_add_node_summary,
+        'if_add_doc_description': args.if_add_doc_description,
+        'if_add_node_text': args.if_add_node_text,
+    }
+    return {key: value for key, value in candidates.items() if value is not None}
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Process PDF or Markdown document and generate structure'
+    )
     parser.add_argument('--pdf_path', type=str, help='Path to the PDF file')
     parser.add_argument('--md_path', type=str, help='Path to the Markdown file')
 
-    parser.add_argument('--model', type=str, default='gpt-4o-2024-11-20', help='Model to use')
+    parser.add_argument('--model', type=str, default=None, help='Model to use (defaults to config.yaml)')
 
-    parser.add_argument('--toc-check-pages', type=int, default=20, 
-                      help='Number of pages to check for table of contents (PDF only)')
-    parser.add_argument('--max-pages-per-node', type=int, default=10,
-                      help='Maximum number of pages per node (PDF only)')
-    parser.add_argument('--max-tokens-per-node', type=int, default=20000,
-                      help='Maximum number of tokens per node (PDF only)')
+    parser.add_argument('--toc-check-pages', type=int, default=None,
+                        help='Number of pages to check for table of contents (PDF only)')
+    parser.add_argument('--max-pages-per-node', type=int, default=None,
+                        help='Maximum number of pages per node (PDF only)')
+    parser.add_argument('--max-tokens-per-node', type=int, default=None,
+                        help='Maximum number of tokens per node (PDF only)')
 
-    parser.add_argument('--if-add-node-id', type=str, default='yes',
-                      help='Whether to add node id to the node')
-    parser.add_argument('--if-add-node-summary', type=str, default='yes',
-                      help='Whether to add summary to the node')
-    parser.add_argument('--if-add-doc-description', type=str, default='no',
-                      help='Whether to add doc description to the doc')
-    parser.add_argument('--if-add-node-text', type=str, default='no',
-                      help='Whether to add text to the node')
-                      
+    parser.add_argument('--if-add-node-id', type=str, default=None,
+                        help='Whether to add node id to the node')
+    parser.add_argument('--if-add-node-summary', type=str, default=None,
+                        help='Whether to add summary to the node')
+    parser.add_argument('--if-add-doc-description', type=str, default=None,
+                        help='Whether to add doc description to the doc')
+    parser.add_argument('--if-add-node-text', type=str, default=None,
+                        help='Whether to add text to the node')
+
     # Markdown specific arguments
     parser.add_argument('--if-thinning', type=str, default='no',
-                      help='Whether to apply tree thinning for markdown (markdown only)')
+                        help='Whether to apply tree thinning for markdown (markdown only)')
     parser.add_argument('--thinning-threshold', type=int, default=5000,
-                      help='Minimum token threshold for thinning (markdown only)')
+                        help='Minimum token threshold for thinning (markdown only)')
     parser.add_argument('--summary-token-threshold', type=int, default=200,
-                      help='Token threshold for generating summaries (markdown only)')
+                        help='Token threshold for generating summaries (markdown only)')
     args = parser.parse_args()
     
     # Validate that exactly one file type is specified
@@ -43,6 +61,9 @@ if __name__ == "__main__":
     if args.pdf_path and args.md_path:
         raise ValueError("Only one of --pdf_path or --md_path can be specified")
     
+    config_loader = ConfigLoader()
+    opt = config_loader.load(_build_config_overrides(args))
+
     if args.pdf_path:
         # Validate PDF file
         if not args.pdf_path.lower().endswith('.pdf'):
@@ -50,20 +71,6 @@ if __name__ == "__main__":
         if not os.path.isfile(args.pdf_path):
             raise ValueError(f"PDF file not found: {args.pdf_path}")
             
-        # Process PDF file
-        # Configure options
-        opt = config(
-            model=args.model,
-            toc_check_page_num=args.toc_check_pages,
-            max_page_num_each_node=args.max_pages_per_node,
-            max_token_num_each_node=args.max_tokens_per_node,
-            if_add_node_id=args.if_add_node_id,
-            if_add_node_summary=args.if_add_node_summary,
-            if_add_doc_description=args.if_add_doc_description,
-            if_add_node_text=args.if_add_node_text
-        )
-
-        # Process the PDF
         toc_with_page_number = page_index_main(args.pdf_path, opt)
         print('Parsing done, saving to file...')
         
@@ -91,22 +98,6 @@ if __name__ == "__main__":
         # Process the markdown
         import asyncio
         
-        # Use ConfigLoader to get consistent defaults (matching PDF behavior)
-        from pageindex.utils import ConfigLoader
-        config_loader = ConfigLoader()
-        
-        # Create options dict with user args
-        user_opt = {
-            'model': args.model,
-            'if_add_node_summary': args.if_add_node_summary,
-            'if_add_doc_description': args.if_add_doc_description,
-            'if_add_node_text': args.if_add_node_text,
-            'if_add_node_id': args.if_add_node_id
-        }
-        
-        # Load config with defaults from config.yaml
-        opt = config_loader.load(user_opt)
-        
         toc_with_page_number = asyncio.run(md_to_tree(
             md_path=args.md_path,
             if_thinning=args.if_thinning.lower() == 'yes',
@@ -131,3 +122,7 @@ if __name__ == "__main__":
             json.dump(toc_with_page_number, f, indent=2, ensure_ascii=False)
         
         print(f'Tree structure saved to: {output_file}')
+
+
+if __name__ == "__main__":
+    main()
