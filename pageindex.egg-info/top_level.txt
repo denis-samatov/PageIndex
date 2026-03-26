@@ -1,0 +1,6 @@
+data
+docs
+notebooks
+pageindex
+scripts
+tests
