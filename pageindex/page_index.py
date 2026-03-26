@@ -318,9 +318,8 @@ def toc_transformer(toc_content, model=None):
 
         new_complete, finish_reason = ChatGPT_API_with_finish_reason(model=model, prompt=prompt)
 
-        if new_complete.startswith('```json'):
-            new_complete =  get_json_content(new_complete)
-            last_complete = last_complete+new_complete
+        new_complete =  get_json_content(new_complete)
+        last_complete = last_complete+new_complete
 
         if_complete = check_if_toc_transformation_is_complete(toc_content, last_complete, model)
         
@@ -669,9 +668,9 @@ def process_none_page_numbers(toc_items, page_list, start_index=1, model=None):
             page_contents = []
             for page_index in range(prev_physical_index, next_physical_index+1):
                 # Add bounds checking to prevent IndexError
-                list_index = page_index - start_index
-                if list_index >= 0 and list_index < len(page_list):
-                    page_text = f"<physical_index_{page_index}>\n{page_list[list_index][0]}\n<physical_index_{page_index}>\n\n"
+                page_list_idx = page_index - start_index
+                if page_list_idx >= 0 and page_list_idx < len(page_list):
+                    page_text = f"<physical_index_{page_index}>\n{page_list[page_list_idx][0]}\n<physical_index_{page_index}>\n\n"
                     page_contents.append(page_text)
                 else:
                     continue
@@ -751,6 +750,25 @@ def single_toc_item_index_fixer(section_title, content, model="gpt-4o-2024-11-20
     return convert_physical_index_to_int(json_content['physical_index'])
 
 
+async def single_toc_item_index_fixer_async(section_title, content, model="gpt-4o-2024-11-20"):
+    tob_extractor_prompt = """
+    You are given a section title and several pages of a document, your job is to find the physical index of the start page of the section in the partial document.
+
+    The provided pages contains tags like <physical_index_X> and <physical_index_X> to indicate the physical location of the page X.
+
+    Reply in a JSON format:
+    {
+        "thinking": <explain which page, started and closed by <physical_index_X>, contains the start of this section>,
+        "physical_index": "<physical_index_X>" (keep the format)
+    }
+    Directly return the final JSON structure. Do not output anything else."""
+
+    prompt = tob_extractor_prompt + '\nSection Title:\n' + str(section_title) + '\nDocument pages:\n' + content
+    response = await ChatGPT_API_async(model=model, prompt=prompt)
+    json_content = extract_json(response)    
+    return convert_physical_index_to_int(json_content['physical_index'])
+
+
 
 async def fix_incorrect_toc(toc_with_page_number, page_list, incorrect_results, start_index=1, model=None, logger=None):
     print(f'start fix_incorrect_toc with {len(incorrect_results)} incorrect results')
@@ -807,15 +825,15 @@ async def fix_incorrect_toc(toc_with_page_number, page_list, incorrect_results, 
         page_contents=[]
         for page_index in range(prev_correct, next_correct+1):
             # Add bounds checking to prevent IndexError
-            list_index = page_index - start_index
-            if list_index >= 0 and list_index < len(page_list):
-                page_text = f"<physical_index_{page_index}>\n{page_list[list_index][0]}\n<physical_index_{page_index}>\n\n"
+            page_list_idx = page_index - start_index
+            if page_list_idx >= 0 and page_list_idx < len(page_list):
+                page_text = f"<physical_index_{page_index}>\n{page_list[page_list_idx][0]}\n<physical_index_{page_index}>\n\n"
                 page_contents.append(page_text)
             else:
                 continue
         content_range = ''.join(page_contents)
         
-        physical_index_int = single_toc_item_index_fixer(incorrect_item['title'], content_range, model)
+        physical_index_int = await single_toc_item_index_fixer_async(incorrect_item['title'], content_range, model)
         
         # Check if the result is correct
         check_item = incorrect_item.copy()
