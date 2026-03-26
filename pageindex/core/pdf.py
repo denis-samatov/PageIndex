@@ -140,7 +140,10 @@ def get_page_tokens(
     Returns:
         List[Tuple[str, int]]: List of (page_text, token_count).
     """
-    enc = tiktoken.encoding_for_model(model)
+    try:
+        enc = tiktoken.encoding_for_model(model)
+    except KeyError:
+        enc = tiktoken.get_encoding("cl100k_base")
     if pdf_parser == "PyPDF2":
         pdf_reader = PyPDF2.PdfReader(pdf_path)
         page_list = []
