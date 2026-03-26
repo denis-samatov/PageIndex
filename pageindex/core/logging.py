@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 from .pdf import get_pdf_name
 
 class JsonLogger:

@@ -8,6 +8,7 @@ from .core.llm import ChatGPT_API, ChatGPT_API_with_finish_reason, ChatGPT_API_a
 from .core.tree import convert_page_to_int, convert_physical_index_to_int, add_node_text, add_node_text_with_labels
 from .core.pdf import get_number_of_pages, get_pdf_title, get_page_tokens, get_text_of_pages, get_first_start_page_from_text, get_last_start_page_from_text
 from .core.logging import JsonLogger
+from pageindex.config import ConfigLoader
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -183,7 +184,13 @@ def extract_toc_content(content, model=None):
     response = response + new_response
     if_complete = check_if_toc_transformation_is_complete(content, response, model)
     
+    attempts = 0
+    max_attempts = 10
     while not (if_complete == "yes" and finish_reason == "finished"):
+        attempts += 1
+        if attempts > max_attempts:
+            raise Exception('Failed to complete table of contents after maximum retries')
+            
         chat_history = [
             {"role": "user", "content": prompt}, 
             {"role": "assistant", "content": response},    
@@ -192,10 +199,6 @@ def extract_toc_content(content, model=None):
         new_response, finish_reason = ChatGPT_API_with_finish_reason(model=model, prompt=prompt, chat_history=chat_history)
         response = response + new_response
         if_complete = check_if_toc_transformation_is_complete(content, response, model)
-        
-        # Optional: Add a maximum retry limit to prevent infinite loops
-        if len(chat_history) > 5:  # Arbitrary limit of 10 attempts
-            raise Exception('Failed to complete table of contents after maximum retries')
     
     return response
 
@@ -242,7 +245,7 @@ def toc_extractor(page_list, toc_page_list, model):
 
 def toc_index_extractor(toc, content, model=None):
     print('start toc_index_extractor')
-    tob_extractor_prompt = """
+    toc_extractor_prompt = """
     You are given a table of contents in a json format and several pages of a document, your job is to add the physical_index to the table of contents in the json format.
 
     The provided pages contains tags like <physical_index_X> and <physical_index_X> to indicate the physical location of the page X.
@@ -263,7 +266,7 @@ def toc_index_extractor(toc, content, model=None):
     If the section is not in the provided pages, do not add the physical_index to it.
     Directly return the final JSON structure. Do not output anything else."""
 
-    prompt = tob_extractor_prompt + '\nTable of contents:\n' + str(toc) + '\nDocument pages:\n' + content
+    prompt = toc_extractor_prompt + '\nTable of contents:\n' + str(toc) + '\nDocument pages:\n' + content
     response = ChatGPT_API(model=model, prompt=prompt)
     json_content = extract_json(response)    
     return json_content
@@ -300,7 +303,13 @@ def toc_transformer(toc_content, model=None):
         return cleaned_response
     
     last_complete = get_json_content(last_complete)
+    attempts = 0
+    max_attempts = 10
     while not (if_complete == "yes" and finish_reason == "finished"):
+        attempts += 1
+        if attempts > max_attempts:
+            raise Exception('Failed to complete table of contents after maximum retries')
+            
         position = last_complete.rfind('}')
         if position != -1:
             last_complete = last_complete[:position+2]
@@ -318,8 +327,15 @@ def toc_transformer(toc_content, model=None):
 
         new_complete, finish_reason = ChatGPT_API_with_finish_reason(model=model, prompt=prompt)
 
-        new_complete =  get_json_content(new_complete)
-        last_complete = last_complete+new_complete
+        new_complete_cleaned = new_complete.strip()
+        if new_complete_cleaned.startswith("```json"):
+            new_complete_cleaned = new_complete_cleaned[7:]
+        if new_complete_cleaned.startswith("```"):
+            new_complete_cleaned = new_complete_cleaned[3:]
+        if new_complete_cleaned.endswith("```"):
+            new_complete_cleaned = new_complete_cleaned[:-3]
+        
+        last_complete = last_complete + new_complete_cleaned
 
         if_complete = check_if_toc_transformation_is_complete(toc_content, last_complete, model)
         
@@ -1087,24 +1103,24 @@ def page_index_main(doc, opt=None):
         raise ValueError("Unsupported input type. Expected a PDF file path or BytesIO object.")
 
     print('Parsing PDF...')
-    page_list = get_page_tokens(doc)
+    page_list = get_page_tokens(doc, model=opt.model if opt is not None else None)
 
     logger.info({'total_page_number': len(page_list)})
     logger.info({'total_token': sum([page[1] for page in page_list])})
 
     async def page_index_builder():
         structure = await tree_parser(page_list, opt, doc=doc, logger=logger)
-        if opt.if_add_node_id == 'yes':
+        if opt.if_add_node_id:
             write_node_id(structure)    
-        if opt.if_add_node_text == 'yes':
+        if opt.if_add_node_text:
             add_node_text(structure, page_list)
-        if opt.if_add_node_summary == 'yes':
-            if opt.if_add_node_text == 'no':
+        if opt.if_add_node_summary:
+            if not opt.if_add_node_text:
                 add_node_text(structure, page_list)
             await generate_summaries_for_structure(structure, model=opt.model)
-            if opt.if_add_node_text == 'no':
+            if not opt.if_add_node_text:
                 remove_structure_text(structure)
-            if opt.if_add_doc_description == 'yes':
+            if opt.if_add_doc_description:
                 # Create a clean structure without unnecessary fields for description generation
                 clean_structure = create_clean_structure_for_description(structure)
                 doc_description = generate_doc_description(clean_structure, model=opt.model)

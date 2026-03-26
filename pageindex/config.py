@@ -31,6 +31,7 @@ class PageIndexConfig(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        extra = "forbid"
 
 
 class ConfigLoader:
@@ -41,7 +42,7 @@ class ConfigLoader:
                 default_path = Path(env_path)
             else:
                 cwd_path = Path.cwd() / "config.yaml"
-                repo_path = Path(__file__).resolve().parents[2] / "config.yaml"
+                repo_path = Path(__file__).resolve().parents[1] / "config.yaml"
                 default_path = cwd_path if cwd_path.exists() else repo_path
                 
         self.default_path = default_path
