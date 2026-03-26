@@ -21,7 +21,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     text = ""
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
-        text += page.extract_text()
+        text += page.extract_text() or ""
     return text
 
 def get_pdf_title(pdf_path: Union[str, BytesIO]) -> str:
@@ -149,7 +149,7 @@ def get_page_tokens(
         page_list = []
         for page_num in range(len(pdf_reader.pages)):
             page = pdf_reader.pages[page_num]
-            page_text = page.extract_text()
+            page_text = page.extract_text() or ""
             token_length = len(enc.encode(page_text))
             page_list.append((page_text, token_length))
         return page_list

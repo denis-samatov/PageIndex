@@ -748,7 +748,7 @@ def check_toc(page_list, opt=None):
 
 ################### fix incorrect toc #########################################################
 def single_toc_item_index_fixer(section_title, content, model="gpt-4o-2024-11-20"):
-    tob_extractor_prompt = """
+    toc_extractor_prompt = """
     You are given a section title and several pages of a document, your job is to find the physical index of the start page of the section in the partial document.
 
     The provided pages contains tags like <physical_index_X> and <physical_index_X> to indicate the physical location of the page X.
@@ -1103,7 +1103,9 @@ def page_index_main(doc, opt=None):
         raise ValueError("Unsupported input type. Expected a PDF file path or BytesIO object.")
 
     print('Parsing PDF...')
-    page_list = get_page_tokens(doc, model=opt.model if opt is not None else None)
+    if opt is None:
+        opt = ConfigLoader().load()
+    page_list = get_page_tokens(doc, model=opt.model)
 
     logger.info({'total_page_number': len(page_list)})
     logger.info({'total_token': sum([page[1] for page in page_list])})

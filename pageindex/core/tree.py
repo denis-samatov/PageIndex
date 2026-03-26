@@ -437,7 +437,7 @@ def add_node_text(node: Structure, pdf_pages: List[Any]) -> None:
         start_page = node.get('start_index')
         end_page = node.get('end_index')
         if start_page is not None and end_page is not None:
-             node['text'] = get_text_of_pdf_pages(pdf_pages, start_page, end_page)
+            node['text'] = get_text_of_pdf_pages(pdf_pages, start_page, end_page)
         if 'nodes' in node:
             add_node_text(node['nodes'], pdf_pages)
     elif isinstance(node, list):
@@ -452,7 +452,7 @@ def add_node_text_with_labels(node: Structure, pdf_pages: List[Any]) -> None:
         start_page = node.get('start_index')
         end_page = node.get('end_index')
         if start_page is not None and end_page is not None:
-             node['text'] = get_text_of_pdf_pages_with_labels(pdf_pages, start_page, end_page)
+            node['text'] = get_text_of_pdf_pages_with_labels(pdf_pages, start_page, end_page)
         if 'nodes' in node:
             add_node_text_with_labels(node['nodes'], pdf_pages)
     elif isinstance(node, list):
