@@ -18,11 +18,11 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         str: Concatenated text from all pages.
     """
     pdf_reader = PyPDF2.PdfReader(pdf_path)
-    text = ""
+    text_parts = []
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
-        text += page.extract_text()
-    return text
+        text_parts.append(page.extract_text())
+    return "".join(text_parts)
 
 def get_pdf_title(pdf_path: Union[str, BytesIO]) -> str:
     """
@@ -53,16 +53,18 @@ def get_text_of_pages(pdf_path: str, start_page: int, end_page: int, tag: bool =
         str: Extracted text.
     """
     pdf_reader = PyPDF2.PdfReader(pdf_path)
-    text = ""
+    text_parts = []
     for page_num in range(start_page-1, end_page):
         if page_num < len(pdf_reader.pages):
             page = pdf_reader.pages[page_num]
             page_text = page.extract_text()
             if tag:
-                text += f"<start_index_{page_num+1}>\n{page_text}\n<end_index_{page_num+1}>\n"
+                text_parts.append(f"<start_index_{page_num+1}>\n")
+                text_parts.append(page_text)
+                text_parts.append(f"\n<end_index_{page_num+1}>\n")
             else:
-                text += page_text
-    return text
+                text_parts.append(page_text)
+    return "".join(text_parts)
 
 def get_first_start_page_from_text(text: str) -> int:
     """
@@ -182,24 +184,28 @@ def get_text_of_pdf_pages(pdf_pages: List[Tuple[str, int]], start_page: int, end
     Returns:
         str: Combined text.
     """
-    text = ""
+    text_parts = []
     # Safe indexing
     total_pages = len(pdf_pages)
     for page_num in range(start_page-1, end_page):
         if 0 <= page_num < total_pages:
-            text += pdf_pages[page_num][0]
-    return text
+            text_parts.append(pdf_pages[page_num][0])
+    return "".join(text_parts)
 
 def get_text_of_pdf_pages_with_labels(pdf_pages: List[Tuple[str, int]], start_page: int, end_page: int) -> str:
     """
     Combine text from pages with <physical_index_N> tags.
     """
-    text = ""
+    text_parts = []
     total_pages = len(pdf_pages)
     for page_num in range(start_page-1, end_page):
         if 0 <= page_num < total_pages:
-            text += f"<physical_index_{page_num+1}>\n{pdf_pages[page_num][0]}\n<physical_index_{page_num+1}>\n"
-    return text
+            label = f"<physical_index_{page_num+1}>\n"
+            text_parts.append(label)
+            text_parts.append(pdf_pages[page_num][0])
+            text_parts.append("\n")
+            text_parts.append(label)
+    return "".join(text_parts)
 
 def get_number_of_pages(pdf_path: Union[str, BytesIO]) -> int:
     """Get total page count of a PDF."""
