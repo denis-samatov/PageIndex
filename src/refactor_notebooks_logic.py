@@ -52,7 +52,7 @@ def refactor_notebook(path):
             new_source = []
             for line in cell['source']:
                 # Replace imports
-                if "from pageindex import PageIndexClient" in line:
+                if "from pageindex import PageIndexClient" in line and not line.strip().startswith("#"):
                     line = line.replace("from pageindex import PageIndexClient", "# from pageindex import PageIndexClient")
                 
                 # Replace client init
@@ -60,15 +60,16 @@ def refactor_notebook(path):
                     line = line.replace("PageIndexClient(", "get_client(")
                 
                 # Fix JsonExtractor if present
-                if "from json_extractor import JsonExtractor" in line:
-                    line = "# from json_extractor import JsonExtractor\nfrom pageindex.core.llm import extract_json, get_json_content\n"
-                
+                if "from json_extractor import JsonExtractor" in line and not line.strip().startswith("#"):
+                    indent = line[:line.find("from")]
+                    line = f"{indent}# from json_extractor import JsonExtractor\n{indent}from pageindex.core.llm import extract_json, get_json_content\n"
+
                 if "JsonExtractor.extract_valid_json" in line:
                     line = line.replace("JsonExtractor.extract_valid_json", "extract_json")
                 
                 # Comment out pip installs
-                if "%pip install" in line:
-                    line = "# " + line
+                if "%pip install" in line and not line.strip().startswith("#"):
+                    line = line.replace("%pip install", "# %pip install")
 
                 new_source.append(line)
             cell['source'] = new_source
