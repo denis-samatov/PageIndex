@@ -144,9 +144,6 @@ def is_leaf_node(data: Structure, node_id: str) -> bool:
         return True
     return False
 
-def get_last_node(structure: List[Any]) -> Any:
-    """Get the last element of a list structure."""
-    return structure[-1]
 
 def list_to_tree(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
