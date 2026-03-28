@@ -395,26 +395,24 @@ def check_token_limit(structure: Structure, limit: int = 110000) -> None:
 
 
 def convert_physical_index_to_int(data: Any) -> Any:
-    """Convert physical_index strings (e.g., '<physical_index_5>') to integers inplace."""
+    """Convert physical_index strings (e.g., '<physical_index_5>') to integers recursively."""
     if isinstance(data, list):
         for i in range(len(data)):
-            # Check if item is a dictionary and has 'physical_index' key
-            if isinstance(data[i], dict) and 'physical_index' in data[i]:
-                if isinstance(data[i]['physical_index'], str):
-                    if data[i]['physical_index'].startswith('<physical_index_'):
-                        data[i]['physical_index'] = int(data[i]['physical_index'].split('_')[-1].rstrip('>').strip())
-                    elif data[i]['physical_index'].startswith('physical_index_'):
-                        data[i]['physical_index'] = int(data[i]['physical_index'].split('_')[-1].strip())
+            data[i] = convert_physical_index_to_int(data[i])
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'physical_index' and isinstance(value, str):
+                if value.startswith('<physical_index_'):
+                    data[key] = int(value.split('_')[-1].rstrip('>').strip())
+                elif value.startswith('physical_index_'):
+                    data[key] = int(value.split('_')[-1].strip())
+            else:
+                data[key] = convert_physical_index_to_int(value)
     elif isinstance(data, str):
         if data.startswith('<physical_index_'):
-            data = int(data.split('_')[-1].rstrip('>').strip())
+            return int(data.split('_')[-1].rstrip('>').strip())
         elif data.startswith('physical_index_'):
-            data = int(data.split('_')[-1].strip())
-        # Check data is int
-        if isinstance(data, int):
-            return data
-        else:
-            return None
+            return int(data.split('_')[-1].strip())
     return data
 
 
