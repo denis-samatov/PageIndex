@@ -2,24 +2,26 @@ import os
 import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 class PageIndexConfig(BaseModel):
     """
     Configuration schema for PageIndex.
     """
-    model: str = Field(default="gpt-4o", description="LLM model to use")
+    # Keep fallback defaults aligned with the shipped config.yaml profile so
+    # repo, test, and installed-package contexts behave the same way.
+    model: str = Field(default="gpt-4o-2024-11-20", description="LLM model to use")
     
     # PDF Processing
-    toc_check_page_num: int = Field(default=3, description="Number of pages to check for TOC")
-    max_page_num_each_node: int = Field(default=5, description="Maximum pages per leaf node")
-    max_token_num_each_node: int = Field(default=4000, description="Max tokens per node") # Approx
+    toc_check_page_num: int = Field(default=20, description="Number of pages to check for TOC")
+    max_page_num_each_node: int = Field(default=10, description="Maximum pages per leaf node")
+    max_token_num_each_node: int = Field(default=20000, description="Max tokens per node") # Approx
     
     # Enrichment
     if_add_node_id: bool = Field(default=True, description="Add unique ID to nodes")
     if_add_node_summary: bool = Field(default=True, description="Generate summary for nodes")
-    if_add_doc_description: bool = Field(default=True, description="Generate doc-level description")
-    if_add_node_text: bool = Field(default=True, description="Keep raw text in nodes")
+    if_add_doc_description: bool = Field(default=False, description="Generate doc-level description")
+    if_add_node_text: bool = Field(default=False, description="Keep raw text in nodes")
     
     # Tree Optimization
     if_thinning: bool = Field(default=True, description="Merge small adjacent nodes")
@@ -29,9 +31,7 @@ class PageIndexConfig(BaseModel):
     # Additional
     api_key: Optional[str] = Field(default=None, description="OpenAI API Key (optional, prefers env var)")
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
 
 class ConfigLoader:
@@ -69,16 +69,7 @@ class ConfigLoader:
         Returns:
             PageIndexConfig: Validated configuration object.
         """
-        user_dict: Dict[str, Any] = {}
-        if user_opt is None:
-            pass
-        elif hasattr(user_opt, '__dict__'):
-            # Handle SimpleNamespace or other objects
-            user_dict = {k: v for k, v in vars(user_opt).items() if v is not None}
-        elif isinstance(user_opt, dict):
-            user_dict = {k: v for k, v in user_opt.items() if v is not None}
-        else:
-             raise TypeError(f"user_opt must be dict or object, got {type(user_opt)}")
+        user_dict = self._normalize_user_opt(user_opt)
 
         # Merge defaults and user overrides
         # Pydantic accepts kwargs, efficiently merging
@@ -89,3 +80,18 @@ class ConfigLoader:
         except ValidationError as e:
             # Re-raise nicely or log
             raise ValueError(f"Configuration validation failed: {e}")
+
+    @staticmethod
+    def _normalize_user_opt(user_opt: Optional[Union[Dict[str, Any], Any]]) -> Dict[str, Any]:
+        if user_opt is None:
+            return {}
+        if isinstance(user_opt, BaseModel):
+            # Preserve explicit None values while ignoring unset fields.
+            return user_opt.model_dump(exclude_unset=True)
+        if isinstance(user_opt, dict):
+            return dict(user_opt)
+        if hasattr(user_opt, "__dict__"):
+            # Generic objects cannot distinguish "unset" from "explicitly None",
+            # so keep the previous behavior for backwards compatibility.
+            return {k: v for k, v in vars(user_opt).items() if v is not None}
+        raise TypeError(f"user_opt must be dict or object, got {type(user_opt)}")
