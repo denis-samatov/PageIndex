@@ -11,6 +11,10 @@ class PageIndexConfig(BaseModel):
     # Keep fallback defaults aligned with the shipped config.yaml profile so
     # repo, test, and installed-package contexts behave the same way.
     model: str = Field(default="gpt-4o-2024-11-20", description="LLM model to use")
+    retrieve_model: Optional[str] = Field(
+        default="gpt-5.4",
+        description="Model to use for agentic retrieval flows",
+    )
     
     # PDF Processing
     toc_check_page_num: int = Field(default=20, description="Number of pages to check for TOC")
