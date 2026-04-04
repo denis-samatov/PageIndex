@@ -10,10 +10,25 @@ def test_extract_json_with_markdown():
     assert extract_json(text) == {"key": "value"}
 
 def test_extract_json_with_trailing_commas():
-    # This might fail depending on implementation robustness, but let's see
+    # Simple trailing comma in object
     text = '{"key": "value",}'
-    # Our implementation tries to fix this
     assert extract_json(text) == {"key": "value"}
+
+    # Trailing comma with whitespace in object
+    text = '{"key": "value" , }'
+    assert extract_json(text) == {"key": "value"}
+
+    # Trailing comma in array
+    text = '[1, 2, 3,]'
+    assert extract_json(text) == [1, 2, 3]
+
+    # Trailing comma with whitespace in array
+    text = '[1, 2, 3 , ]'
+    assert extract_json(text) == [1, 2, 3]
+
+def test_extract_json_nested_trailing_commas():
+    text = '{"a": [1, ], "b": {"c": 2, }}'
+    assert extract_json(text) == {"a": [1], "b": {"c": 2}}
 
 def test_count_tokens():
     text = "Hello world"
