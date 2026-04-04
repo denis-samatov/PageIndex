@@ -49,9 +49,58 @@ class TestTree(unittest.TestCase):
     def test_write_node_id(self):
         sample_structure = self.sample_structure
         tree = list_to_tree(sample_structure)
-        write_node_id(tree)
+        next_id = write_node_id(tree)
         self.assertEqual(tree[0]["node_id"], "0000")
         self.assertEqual(tree[0]["nodes"][0]["node_id"], "0001")
+        self.assertEqual(tree[0]["nodes"][1]["node_id"], "0002")
+        self.assertEqual(tree[1]["node_id"], "0003")
+        self.assertEqual(next_id, 4)
+
+    def test_write_node_id_empty(self):
+        self.assertEqual(write_node_id([]), 0)
+        self.assertEqual(write_node_id({}), 1) # A single empty dict gets one ID
+
+    def test_write_node_id_flat(self):
+        data = [{"title": "A"}, {"title": "B"}]
+        next_id = write_node_id(data)
+        self.assertEqual(data[0]["node_id"], "0000")
+        self.assertEqual(data[1]["node_id"], "0001")
+        self.assertEqual(next_id, 2)
+
+    def test_write_node_id_nested(self):
+        data = {
+            "title": "Root",
+            "nodes": [
+                {"title": "Child 1", "nodes": [{"title": "Grandchild 1"}]},
+                {"title": "Child 2"}
+            ]
+        }
+        next_id = write_node_id(data)
+        self.assertEqual(data["node_id"], "0000")
+        self.assertEqual(data["nodes"][0]["node_id"], "0001")
+        self.assertEqual(data["nodes"][0]["nodes"][0]["node_id"], "0002")
+        self.assertEqual(data["nodes"][1]["node_id"], "0003")
+        self.assertEqual(next_id, 4)
+
+    def test_write_node_id_custom_start(self):
+        data = [{"title": "A"}, {"title": "B"}]
+        next_id = write_node_id(data, node_id=10)
+        self.assertEqual(data[0]["node_id"], "0010")
+        self.assertEqual(data[1]["node_id"], "0011")
+        self.assertEqual(next_id, 12)
+
+    def test_write_node_id_multiple_nodes_keys(self):
+        # The function checks for 'nodes' in key
+        data = {
+            "title": "Root",
+            "sub_nodes": [{"title": "Sub 1"}],
+            "extra_nodes": [{"title": "Extra 1"}]
+        }
+        next_id = write_node_id(data)
+        self.assertEqual(data["node_id"], "0000")
+        self.assertEqual(data["sub_nodes"][0]["node_id"], "0001")
+        self.assertEqual(data["extra_nodes"][0]["node_id"], "0002")
+        self.assertEqual(next_id, 3)
 
 if __name__ == "__main__":
     unittest.main()
