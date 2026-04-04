@@ -6,11 +6,29 @@ import time
 import json
 import asyncio
 from typing import Optional, List, Dict, Any, Union, Tuple
+from functools import lru_cache
 from dotenv import load_dotenv
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("CHATGPT_API_KEY")
+
+@lru_cache(maxsize=32)
+def _get_tiktoken_encoding(model: str) -> Any:
+    """
+    Get the tiktoken encoding for a given model, with caching.
+
+    Args:
+        model (str): The model name.
+
+    Returns:
+        Any: The encoding object.
+    """
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+         # Fallback for newer or unknown models
+        return tiktoken.get_encoding("cl100k_base")
 
 def count_tokens(text: Optional[str], model: str = "gpt-4o") -> int:
     """
@@ -25,11 +43,7 @@ def count_tokens(text: Optional[str], model: str = "gpt-4o") -> int:
     """
     if not text:
         return 0
-    try:
-        enc = tiktoken.encoding_for_model(model)
-    except KeyError:
-         # Fallback for newer or unknown models
-        enc = tiktoken.get_encoding("cl100k_base")
+    enc = _get_tiktoken_encoding(model)
     tokens = enc.encode(text)
     return len(tokens)
 
