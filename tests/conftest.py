@@ -8,6 +8,9 @@ mock_modules = [
 for module in mock_modules:
     sys.modules[module] = MagicMock()
 
-# Mock internal submodules to avoid relative import errors when running tests as a package
-sys.modules['pageindex.core.llm'] = MagicMock()
-sys.modules['pageindex.core.pdf'] = MagicMock()
+# Setup tiktoken mock to behave more realistically for test_count_tokens
+mock_tiktoken = sys.modules['tiktoken']
+mock_encoding = MagicMock()
+mock_encoding.encode.return_value = [1, 2, 3] # Dummy tokens
+mock_tiktoken.encoding_for_model.return_value = mock_encoding
+mock_tiktoken.get_encoding.return_value = mock_encoding

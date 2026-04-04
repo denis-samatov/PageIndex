@@ -5,6 +5,7 @@ import os
 import time
 import json
 import asyncio
+import re
 from typing import Optional, List, Dict, Any, Union, Tuple
 from dotenv import load_dotenv
 
@@ -234,8 +235,8 @@ def extract_json(content: str) -> Union[Dict[str, Any], List[Any]]:
         logging.error(f"Failed to extract JSON: {e}")
         # Try to clean up the content further if initial parsing fails
         try:
-            # Remove any trailing commas before closing brackets/braces
-            json_content = json_content.replace(',]', ']').replace(',}', '}')
+            # Remove any trailing commas before closing brackets/braces, including cases with spaces
+            json_content = re.sub(r',\s*([\]}])', r'\1', json_content)
             return json.loads(json_content)
         except:
             logging.error("Failed to parse JSON even after cleanup")
