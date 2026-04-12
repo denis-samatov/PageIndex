@@ -1,6 +1,5 @@
 import os
 import json
-import asyncio
 import uuid
 from typing import List, Dict, Any, Optional
 import sys
@@ -9,7 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from pageindex import page_index
-from pageindex.core.llm import ChatGPT_API_async, extract_json
+from pageindex.core.llm import extract_json
 import pageindex.utils as utils
 
 class PageIndexClient:
