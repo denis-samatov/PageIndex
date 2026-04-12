@@ -5,7 +5,9 @@ from local_client_adapter import get_client
 
 def test_adapter():
     print("Testing Local Adapter...")
-    client = get_client(api_key="TEST")
+    # The client should initialize without a hardcoded key,
+    # relying on environment variables or mock objects.
+    client = get_client()
     print("Client initialized.")
     
     # Check methods exist
