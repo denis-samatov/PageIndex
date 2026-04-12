@@ -16,7 +16,7 @@ sys.modules['pageindex.core.pdf'] = MagicMock()
 sys.modules['.llm'] = MagicMock()
 sys.modules['.pdf'] = MagicMock()
 
-from pageindex.core.tree import list_to_tree, structure_to_list, write_node_id
+from pageindex.core.tree import list_to_tree, structure_to_list, write_node_id, remove_fields
 
 class TestTree(unittest.TestCase):
     def setUp(self):
@@ -101,6 +101,63 @@ class TestTree(unittest.TestCase):
         self.assertEqual(data["sub_nodes"][0]["node_id"], "0001")
         self.assertEqual(data["extra_nodes"][0]["node_id"], "0002")
         self.assertEqual(next_id, 3)
+
+    def test_remove_fields(self):
+        # 1. Basic removal of a single field
+        data = {"a": 1, "b": 2}
+        result = remove_fields(data, fields=["a"])
+        self.assertEqual(result, {"b": 2})
+
+        # 2. Removal of multiple fields
+        data = {"a": 1, "b": 2, "c": 3}
+        result = remove_fields(data, fields=["a", "c"])
+        self.assertEqual(result, {"b": 2})
+
+        # 3. Default field removal (defaults to ['text'])
+        data = {"title": "Intro", "text": "Some text content"}
+        result = remove_fields(data)
+        self.assertEqual(result, {"title": "Intro"})
+
+        # 4. Recursive removal from nested dictionaries and lists
+        data = {
+            "title": "Root",
+            "text": "Root text",
+            "nodes": [
+                {"title": "Child 1", "text": "Child 1 text"},
+                {"title": "Child 2", "other": "Keep this"}
+            ]
+        }
+        result = remove_fields(data, fields=["text"])
+        expected = {
+            "title": "Root",
+            "nodes": [
+                {"title": "Child 1"},
+                {"title": "Child 2", "other": "Keep this"}
+            ]
+        }
+        self.assertEqual(result, expected)
+
+        # 5. Handling of empty structures
+        self.assertEqual(remove_fields({}, fields=["a"]), {})
+        self.assertEqual(remove_fields([], fields=["a"]), [])
+
+        # 6. Handling of fields not present in the structure
+        data = {"a": 1, "b": 2}
+        result = remove_fields(data, fields=["c"])
+        self.assertEqual(result, data)
+
+        # 7. Ensuring original structure is not modified (immutability)
+        data = {"a": 1, "b": {"c": 2, "text": "val"}}
+        data_copy = {
+            "a": 1,
+            "b": {"c": 2, "text": "val"}
+        } # Deep copy manually for comparison
+        remove_fields(data, fields=["text"])
+        self.assertEqual(data, data_copy)
+
+        # 8. Handling of primitive values
+        self.assertEqual(remove_fields(123, fields=["a"]), 123)
+        self.assertEqual(remove_fields("string", fields=["a"]), "string")
 
 if __name__ == "__main__":
     unittest.main()
