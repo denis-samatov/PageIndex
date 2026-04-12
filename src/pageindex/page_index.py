@@ -366,7 +366,7 @@ def find_toc_pages(start_page_index, page_list, opt, logger=None):
 def remove_page_number(data):
     if isinstance(data, dict):
         data.pop('page_number', None)  
-        for key in list(data.keys()):
+        for key in data:
             if 'nodes' in key:
                 remove_page_number(data[key])
     elif isinstance(data, list):
