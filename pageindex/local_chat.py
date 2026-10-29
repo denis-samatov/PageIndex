@@ -1129,15 +1129,16 @@ def run_messages(client, messages, model: str,
     envelope["content"] = [_dump_block(item) for item in final.content]
     envelope["usage"] = _anthropic_usage(turns, envelope.get("usage") or {})
     # The full turn sequence (assistant tool_use + user tool_result + final),
-    # valid for verbatim append to the caller's history. The runner appends
-    # a turn to its params only when it executed tools from it, and which
-    # turns qualify is vendor policy that has changed across anthropic
-    # releases, so stop_reason alone cannot tell. Whether final's tool_use
-    # ids already sit in the history is the ground truth for "already
-    # appended".
+    # valid for verbatim append to the caller's history. SDK releases differ
+    # in whether a terminal reply is already in the captured conversation.
+    # Normalize that trailing reply before adding its appendable content;
+    # executed tool turns end in a user tool_result and remain untouched.
     new_messages = [_dump_message(message)
                     for message in conversation[len(prepared):]]
     final_blocks = [_dump_block(item) for item in final.content]
+    if (new_messages and new_messages[-1].get("role") == "assistant"
+            and new_messages[-1].get("content") == final_blocks):
+        new_messages.pop()
     final_ids = {block.get("id") for block in final_blocks
                  if block.get("type") == "tool_use"}
     history_ids = {block.get("id")

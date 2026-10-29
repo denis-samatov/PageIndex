@@ -14,3 +14,19 @@ The frozen requirements include PyPDF2/litellm versions with advisory matches. D
 
 This note changes attribution and usage guidance only. It does not certify the
 upstream code, refresh its full dependency tree, or claim newly executed tests.
+
+## Adapter follow-up — 2026-10-29
+
+The subsequent personal contribution is limited to the own-model Anthropic
+chat adapter and its regression tests. It normalizes a terminal assistant
+reply already recorded by newer SDKs, preventing duplicate text and unanswered
+terminal tool calls in the appendable conversation. Tests also distinguish
+legacy full-history requests from SDK message-thread continuation and preserve
+caller headers without rejecting SDK protocol betas.
+
+Local mock-only validation on Python 3.13.15, with Anthropic 2.3.0 and separately
+0.108.0, passed the full suite in each environment: **432 passed, 7 skipped**.
+The chat module passed **115 tests** with each SDK. Optional Claude Agent SDK
+tests were not qualified locally; no real provider calls, deployment, benchmark
+or dependency-security qualification is claimed. Existing upstream authorship,
+untrusted-PDF and dependency limitations above remain applicable.
