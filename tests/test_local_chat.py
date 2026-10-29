@@ -8,10 +8,17 @@ import types
 import httpx  # via the hard `openai` dependency
 import pytest
 
-try:  # anthropic >= 1.0 validates http_client against httpx2
-    import httpx2 as anthropic_httpx
-except ImportError:  # older anthropic rides classic httpx
+try:
+    from anthropic import DefaultHttpxClient
+except ImportError:
     anthropic_httpx = httpx
+else:
+    # Both transports can be installed transitively; match the SDK's
+    # accepted client type rather than preferring whichever imports.
+    if issubclass(DefaultHttpxClient, httpx.Client):
+        anthropic_httpx = httpx
+    else:
+        import httpx2 as anthropic_httpx
 
 import pageindex.local_chat as local_chat
 from pageindex import (PageIndexAPIError, PageIndexClient,
@@ -744,9 +751,38 @@ def test_messages_end_to_end(client, store_path, fake_anthropic):
     browse = next(t for t in request["tools"]
                   if t["name"] == "browse_documents")
     assert "folder_id" not in browse["input_schema"]["properties"]
-    # Native prefix continuation: request 2 extends request 1's messages.
-    assert calls[1]["messages"][:len(calls[0]["messages"])] \
-        == calls[0]["messages"]
+    if "thread" in calls[1]:
+        # Current SDKs reference the stored reply and send only the delta.
+        assert calls[1]["thread"]["type"] == "continue"
+        assert calls[1]["thread"]["previous_message_id"] == "msg_fake"
+        assert calls[1]["messages"] == [result["messages"][1]]
+    else:
+        # Legacy SDKs resend the full conversation prefix.
+        assert calls[1]["messages"][:len(calls[0]["messages"])] \
+            == calls[0]["messages"]
+
+
+@needs_anthropic
+@pytest.mark.parametrize("stop_reason", ["end_turn", "refusal"])
+def test_messages_terminal_turn_returned_once(client, fake_anthropic,
+                                             stop_reason):
+    """A terminal assistant is appendable exactly once, even when the
+    SDK already includes it in the runner's captured conversation."""
+    content = [{"type": "text", "text": "A terminal answer"}]
+    if stop_reason != "end_turn":
+        content.append(_anthropic_tool_use())
+    caller_history = [
+        {"role": "user", "content": "earlier question"},
+        {"role": "assistant", "content": [dict(content[0])]},
+        {"role": "user", "content": "q"}]
+    original_history = json.loads(json.dumps(caller_history))
+    fake_anthropic([_anthropic_message(content, stop_reason)])
+    result = client.messages(caller_history, model="claude-test",
+                             max_tokens=100, max_turns=1)
+    assert result["messages"] == [
+        {"role": "assistant", "content": [content[0]]}]
+    assert result["content"] == content
+    assert caller_history == original_history
 
 
 @needs_anthropic
@@ -1864,6 +1900,7 @@ def test_messages_extra_headers_reach_the_wire(client, monkeypatch):
 
     def handler(request):
         seen["beta"] = request.headers.get("anthropic-beta")
+        seen["trace"] = request.headers.get("x-caller-trace")
         return anthropic_httpx.Response(200, json=_anthropic_message(
             [{"type": "text", "text": "ok"}], "end_turn"))
 
@@ -1872,9 +1909,16 @@ def test_messages_extra_headers_reach_the_wire(client, monkeypatch):
             transport=anthropic_httpx.MockTransport(handler)))
     monkeypatch.setattr(local_chat, "_anthropic_client",
                         lambda backend=None: fake)
-    client.messages("q", model="claude-sonnet-4-5",
-                    extra_headers={"anthropic-beta": "context-1m-2025"})
-    assert seen["beta"] == "context-1m-2025"
+    headers = {"anthropic-beta": "context-1m-2025",
+               "x-caller-trace": "trace-test"}
+    client.messages("q", model="claude-sonnet-4-5", extra_headers=headers)
+    # The SDK may add its own protocol betas (e.g. message threading).
+    # Caller opt-ins must survive that merge, along with ordinary headers.
+    assert "context-1m-2025" in {value.strip()
+                                for value in seen["beta"].split(",")}
+    assert seen["trace"] == "trace-test"
+    assert headers == {"anthropic-beta": "context-1m-2025",
+                       "x-caller-trace": "trace-test"}
 
 
 @needs_agents
