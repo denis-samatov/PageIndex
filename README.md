@@ -1,3 +1,5 @@
+> Fork purpose, attribution and qualification limits: [FORK_SCOPE.md](FORK_SCOPE.md).
+
 <div align="center">
   
 <a href="https://vectify.ai/pageindex" target="_blank">
