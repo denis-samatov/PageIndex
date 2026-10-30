@@ -9,10 +9,10 @@ from typing import Union
 import pypdfium2 as pdfium
 
 # Raw PDF object access (ToUnicode CMaps, content streams, font dicts, /WMode)
-# that PDFium does not expose, read via PyPDF2 -- already a project dependency and
+# that PDFium does not expose, read via pypdf -- already a project dependency and
 # permissively licensed. A thin adapter exposes the small raw-object API the
 # helpers below need, so their calibrated logic stays unchanged.
-import PyPDF2 as _pypdf2  # declared dependency (also imported by pageindex.utils/client)
+import pypdf as _pypdf2  # declared dependency (also imported by pageindex.utils/client)
 
 from ..model import Span, Rect
 
@@ -215,7 +215,7 @@ def parse_charlevel_meta(doc_handle: Union[str, Path, BytesIO]) -> tuple[list[li
     else:
         pdf = doc_handle
 
-    # Open the same document in PyPDF2 (already a project dependency) to read the
+    # Open the same document in pypdf (already a project dependency) to read the
     # page content streams: span merger item-flush operators (q/Q save/restore, marked
     # content, XObject) live there and PDFium's flattened object model cannot expose
     # them. Optional/guarded -- any failure leaves flush_id unset so the merger

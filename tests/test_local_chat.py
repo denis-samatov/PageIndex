@@ -2262,9 +2262,16 @@ def test_dump_block_omits_unset_response_defaults():
         "id": "tu_1", "input": {}, "name": "t", "type": "tool_use"}
 
 
-def test_default_max_tokens_respects_output_ceilings():
+def test_default_max_tokens_respects_output_ceilings(monkeypatch):
     """A lifted thinking default must not overshoot the model's output
     ceiling — the wire rejects max_tokens above it; bool is not a budget."""
+    import litellm
+    # Exercise the ceiling contract independently of the bundled model catalog,
+    # whose vendor limits can change without changing this implementation.
+    monkeypatch.setattr(litellm, "model_cost", {
+        "claude-opus-4-1": {"max_output_tokens": 32000},
+        "claude-sonnet-4-5-20250929": {"max_output_tokens": 64000},
+    })
     lift = local_chat._default_max_tokens
     enabled = {"type": "enabled", "budget_tokens": 30000}
     assert lift("claude-opus-4-1", enabled) == 32000
