@@ -13,18 +13,21 @@ concurrency:
   group: tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  LITELLM_LOCAL_MODEL_COST_MAP: "True"
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.11", "3.13"]
         agent-frameworks: [without, with]
         pdfium: ["5"]
         include:
           # one leg holds the 4.x insurance line
-          - python-version: "3.10"
+          - python-version: "3.11"
             agent-frameworks: with
             pdfium: "4"
     name: py${{ matrix.python-version }} (${{ matrix.agent-frameworks }} frameworks, pdfium ${{ matrix.pdfium }})
@@ -35,12 +38,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install -r requirements.txt pytest
+      - run: pip install --require-hashes -r requirements-ci-py${{ matrix.python-version }}-linux.lock
       - if: matrix.agent-frameworks == 'without'
-        # requirements.txt carries it; this leg tests the no-framework paths
-        run: pip uninstall -y openai-agents
-      - if: matrix.agent-frameworks == 'with'
-        run: pip install openai-agents claude-agent-sdk anthropic
+        # Remove all optional frameworks to keep this a real absence-path test.
+        run: pip uninstall -y openai-agents claude-agent-sdk anthropic
       - if: matrix.pdfium == '4'
+        # Legacy compatibility insurance only; the supported/audited profile is 5.x.
         run: pip install "pypdfium2<5"
       - run: python -m pytest -q

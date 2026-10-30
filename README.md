@@ -1,4 +1,5 @@
 > Fork purpose, attribution and qualification limits: [FORK_SCOPE.md](FORK_SCOPE.md).
+> Maintained fork profile: Python 3.11+, patched PDF dependencies and hash-locked offline CI. Install this checkout for fork fixes; upstream PyPI releases are separate.
 
 <div align="center">
   

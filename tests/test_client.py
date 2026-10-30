@@ -717,9 +717,9 @@ def test_submit_rejects_structure_beyond_stored_pages(local_client, sample_pdf,
 
 def test_submit_survives_pypdf2_lone_surrogates(local_client, sample_pdf,
                                                 monkeypatch):
-    """PyPDF2 decodes broken ToUnicode with surrogatepass; the store gets U+FFFD, not a utf-8-fatal str."""
-    import PyPDF2
-    monkeypatch.setattr(PyPDF2.PageObject, "extract_text",
+    """pypdf decodes broken ToUnicode with surrogatepass; the store gets U+FFFD, not a utf-8-fatal str."""
+    import pypdf
+    monkeypatch.setattr(pypdf.PageObject, "extract_text",
                         lambda self: "\ud83dello broken")
     monkeypatch.setattr(
         pageindex.flash, "page_index_flash",
@@ -798,7 +798,7 @@ def test_corrupt_pdf_raises_api_error(local_client, tmp_path):
 
 
 def test_encrypted_pdf_raises_api_error(local_client, sample_pdf, tmp_path):
-    from PyPDF2 import PdfReader, PdfWriter
+    from pypdf import PdfReader, PdfWriter
 
     writer = PdfWriter()
     for page in PdfReader(sample_pdf).pages:

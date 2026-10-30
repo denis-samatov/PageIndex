@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Union
 
 import pypdfium2 as pdfium
-import PyPDF2 as _pypdf2  # declared dependency (also imported by pageindex.utils/client)
+import pypdf as _pypdf2  # declared dependency (also imported by pageindex.utils/client)
 
 from .model import Span
 from .parser_pdfium_charlevel import (
@@ -99,7 +99,7 @@ def _anonymous_main():
 def _init_worker(kind: str, payload) -> None:
     global _worker_pdf, _worker_pdf_doc, _worker_font_maps
     # Open the document exactly as parse_charlevel_meta does, including
-    # the guarded PyPDF2 open and its separate bytes copy.
+    # the guarded pypdf open and its separate bytes copy.
     if kind == "path":
         _worker_pdf = pdfium.PdfDocument(payload)
     else:
